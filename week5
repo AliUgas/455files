@@ -1,0 +1,192 @@
+import sys
+import xml.etree.ElementTree as ET
+import numpy as np
+import pandas as pd
+from sklearn import metrics
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.naive_bayes import MultinomialNB
+
+
+
+
+
+def main():
+    bayes("C:\\Users\\aliug\\Desktop\\tcss455\\public-test-data",
+         "C:\\Users\\aliug\\Desktop\\tcss455")  # change in vm
+
+
+def bayes(file, output):
+    fileIn = file  # sys.argv[1]
+    dfProfile = pd.read_csv(
+        "C:\\Users\\aliug\\Desktop\\tcss455\\training\\profile\\profile.csv")  # "./tcss455/training/profile/profile.csv"
+    testDfProf = pd.read_csv(fileIn+"\\profile\\profile.csv")
+
+    train_text = "C:\\Users\\aliug\\Desktop\\tcss455\\training\\text"
+    test_text = fileIn+"\\text"
+    statusCol = []
+    statusTest = []
+    for index in dfProfile.iterrows():
+        theRow = index[1]
+        user = theRow["userid"]
+        text = open(train_text+"\\"+user+".txt", 'r')
+        status = ""
+        for line in text:
+            status += line
+        statusCol.append(status)
+        text.close()
+    for index in testDfProf.iterrows():
+        theRow = index[1]
+        user = theRow["userid"]
+        text = open(test_text+"\\"+user+".txt", 'r')
+        status = ""
+        for line in text:
+            status += line
+        statusTest.append(status)
+        text.close()
+
+
+    testDfProf.insert(9, "status", statusTest, True)
+    dfProfile.insert(9, "status", statusCol, True)
+    data_status = dfProfile.loc[:, ['status', 'gender']]
+    data_status_test = testDfProf.loc[:, ['status', 'gender']]
+
+    # Splitting the data into 300 training instances and 104 test instances
+#    n = 1500
+ #   all_Ids = np.arange(len(data_status))
+  #  random.shuffle(all_Ids)
+   # test_Ids = all_Ids[0:n]
+    #train_Ids = all_Ids[n:]
+    #data_test = data_status.loc[test_Ids, :]
+    #data_train = data_status.loc[train_Ids, :]
+
+    # Training a Naive Bayes model
+    count_vect = CountVectorizer()
+    X_train = count_vect.fit_transform(data_status['status'])
+    y_train = data_status['gender']
+    clf = MultinomialNB()
+    clf.fit(X_train, y_train)
+
+    # Testing the Naive Bayes model
+    X_test = count_vect.transform(data_status_test['status'])
+    y_predicted = clf.predict(X_test)
+
+    # Reporting on classification performance
+    #print("Accuracy: %.2f" % accuracy_score(y_test, y_predicted))
+    #classes = ['0', '1']
+    #cnf_matrix = confusion_matrix(y_test, y_predicted, labels=classes)
+    #print("Confusion matrix:")
+    #print(cnf_matrix)
+
+    fileOut = ET.Element("user")
+    index = 0
+    female = 0
+    male = 0
+    with open(fileIn+"\\profile\\profile.csv", 'r') as fpIn:
+        des = 0
+        for line in fpIn:
+            if des == 0:
+                des+=1
+                continue
+            token = line.split(",")
+            user = token[1]
+            if y_predicted[index] == 0:
+                maxGen = "male"
+                index+=1
+                male +=1
+            else:
+                maxGen = "female"
+                index+=1
+                female+=1
+            fileOut.set("id", user)
+            fileOut.set("age_group", "")
+            fileOut.set("gender", maxGen)
+            fileOut.set("extrovert", "")
+            fileOut.set("neurotic", "")
+            fileOut.set("agreeable", "")
+            fileOut.set("conscientious", "")
+            fileOut.set("open", "")
+            tree = ET.ElementTree(fileOut)
+            f = open(output+"\\"+user+".xml", "wb")
+            tree.write(f)
+    
+
+
+
+
+
+def linear(file, output):
+    fileIn = file  # sys.argv[1]
+    dfProfile = pd.read_csv(
+        "C:\\Users\\aliug\\Desktop\\tcss455\\training\\profile\\profile.csv")  # "./tcss455/training/profile/profile.csv"
+    dfLIWC = pd.read_csv(
+        "C:\\Users\\aliug\\Desktop\\tcss455\\training\\LIWC\\LIWC.csv")  # "./tcss455/training/LIWC/LIWC.csv.csv"
+    correct_df = dfLIWC.copy()
+    correct_df.rename(columns={'userId': 'userid'}, inplace=True)
+    df = pd.merge(dfProfile, correct_df, on="userid", how="outer")
+    testDfProf = pd.read_csv(fileIn+"\\profile\\profile.csv")
+    testDfLIWC = pd.read_csv(fileIn+"\\LIWC\\LIWC.csv")
+    correct_testDf = testDfLIWC.copy()
+    correct_testDf.rename(columns={'userId': 'userid'}, inplace=True)
+    testDf = pd.merge(testDfProf, correct_testDf, on="userid", how="outer")
+
+    feature_cols = df.columns.values.tolist()
+    test_cols = testDf.columns.values.tolist()
+
+    X = df[feature_cols[10:]]
+
+    data_predict = df.agr
+
+    X_train, X_test, y_train, y_test = train_test_split(X, data_predict, test_size=0.2)
+    linreg = LinearRegression()
+    linreg.fit(X, data_predict)
+   # print("\nCoefficients:", list(zip(feature_cols[10:], linreg.coef_)))
+    #print("Intercept:", linreg.intercept_)
+
+    y_pred = linreg.predict(X_test)
+    print(y_pred)
+
+    print(y_test)
+    #print("\nMAE:", metrics.mean_absolute_error(y_test, y_pred))
+    #print("MSE:", metrics.mean_squared_error(y_test, y_pred))
+    print("RMSE:", np.sqrt(metrics.mean_squared_error(y_test, y_pred)))
+
+
+    out = output
+
+
+    fileOut = ET.Element("user")
+
+
+    index = 0
+
+'''
+    with open(fileIn+"\\profile\\profile.csv", 'r') as fpIn:
+        des = 0
+        for line in fpIn:
+            if des == 0:
+                des+=1
+                continue
+            token = line.split(",")
+            user = token[1]
+            if pred_gender[index] == 0:
+                maxGen = "male"
+                index+=1
+            else:
+                maxGen = "female"
+                index+=1
+            fileOut.set("id", user)
+            fileOut.set("age_group", "")
+            fileOut.set("gender", maxGen)
+            fileOut.set("extrovert", "")
+            fileOut.set("neurotic", "")
+            fileOut.set("agreeable", "")
+            fileOut.set("conscientious", "")
+            fileOut.set("open", "")
+            tree = ET.ElementTree(fileOut)
+            f = open(output+"\\"+user+".xml", "wb")
+            tree.write(f)
+
+'''
+main()
